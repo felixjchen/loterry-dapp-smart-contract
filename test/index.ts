@@ -1,19 +1,50 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("Greeter", function () {
-  it("Should return the new greeting once it's changed", async function () {
-    const Greeter = await ethers.getContractFactory("Greeter");
-    const greeter = await Greeter.deploy("Hello, world!");
-    await greeter.deployed();
+describe("lotteryMokToken", () => {
+  it("Should have an intial balance of 40", async () => {
+    const LotteryMokToken = await ethers.getContractFactory("lotteryMokToken");
+    const lotteryMokToken = await LotteryMokToken.deploy(40);
+    await lotteryMokToken.deployed();
 
-    expect(await greeter.greet()).to.equal("Hello, world!");
+    const [owner] = await ethers.getSigners();
 
-    const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
+    const ownerBalance = await lotteryMokToken.balanceOf(owner.address);
+    expect(ownerBalance).to.equal(40);
+  });
+});
 
-    // wait until the transaction is mined
-    await setGreetingTx.wait();
+describe("Lottery", () => {
+  const deployContracts = async () => {
+    const LotteryMokToken = await ethers.getContractFactory("lotteryMokToken");
+    const lotteryMokToken = await LotteryMokToken.deploy(40);
+    await lotteryMokToken.deployed();
 
-    expect(await greeter.greet()).to.equal("Hola, mundo!");
+    const Lottery = await ethers.getContractFactory("Lottery");
+    const lottery = await Lottery.deploy();
+    await lotteryMokToken.deployed();
+    return { lotteryMokToken, lottery };
+  };
+
+  it("should let owner withdraw", async () => {
+    const { lotteryMokToken, lottery } = await deployContracts();
+    const [owner, addr1] = await ethers.getSigners();
+
+    await lottery.ownerWithdrawERC20(lotteryMokToken.address, addr1.address);
+
+    const ownerBalance = await lotteryMokToken.balanceOf(owner.address);
+    expect(ownerBalance).to.equal(40);
+  });
+
+  it("shouldn't let not owner withdraw", async () => {
+    const { lotteryMokToken, lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+
+    await expect(
+      lottery
+        .connect(addr1)
+        .ownerWithdrawERC20(lotteryMokToken.address, addr1.address)
+    ).to.be.reverted;
   });
 });
