@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Lottery {
   address private ownerAddress;
@@ -15,14 +16,15 @@ contract Lottery {
   event Incoming(address, uint256);
   event Outgoing(address, uint256);
 
+  // https://ethereum.org/en/developers/tutorials/transfers-and-approval-of-erc-20-tokens-from-a-solidity-smart-contract/
+  IERC20 public token;
+
   // Constructor is run once upon deploying SC... used to set intial state
   constructor() {
     // In the constructor... msg.sender is the owner of smart contract
     ownerAddress = msg.sender;
-  }
 
-  receive() external payable {
-    emit Incoming(msg.sender, msg.value);
+    token = new lotteryMokToken();
   }
 
   modifier onlyOwner() {
@@ -30,9 +32,11 @@ contract Lottery {
     _;
   }
 
+  function buyTickets(address recipient) public {}
+
   // Dumps entire feeTotal into recipient's address.
   // Only owner can call this function
-  function ownerWithdrawERC20(ERC20 token, address recipient) public onlyOwner {
+  function ownerWithdrawERC20(address recipient) public onlyOwner {
     token.transfer(recipient, feeTotal);
     emit Outgoing(recipient, feeTotal);
     feeTotal = 0;
@@ -43,8 +47,11 @@ contract Lottery {
 // https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#core
 contract lotteryMokToken is ERC20 {
   // Constructor is run once upon deploying SC... used to set intial state
-  constructor(uint256 initialBalance) ERC20("lotteryMokToken", "MOK") {
+  constructor() ERC20("lotteryMokToken", "MOK") {
     // In the constructor... msg.sender is the owner of smart contract
-    _mint(msg.sender, initialBalance);
+  }
+
+  function mint(uint256 amount) public {
+    _mint(msg.sender, amount);
   }
 }
