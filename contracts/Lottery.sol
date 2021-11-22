@@ -88,7 +88,8 @@ contract Lottery {
     for (uint256 i = 0; i < ticketCount; i++) {
       tickets.push(msg.sender);
     }
-    uint256 fee = totalPrice / 20;
+    uint256 feeBasisPoints = 500;
+    uint256 fee = (totalPrice * feeBasisPoints) / 10000;
     prizeTotal += totalPrice - fee;
     feeTotal += fee;
   }
