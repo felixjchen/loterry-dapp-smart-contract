@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+// https://docs.openzeppelin.com/contracts/2.x/access-control
 
 contract Lottery {
   address private ownerAddress;
@@ -19,10 +20,12 @@ contract Lottery {
   event Outgoing(address, uint256);
 
   // https://ethereum.org/en/developers/tutorials/transfers-and-approval-of-erc-20-tokens-from-a-solidity-smart-contract/
-  MockToken public token;
+  IERC20 public token;
+
+  // cast the interface.
 
   // Constructor is run once upon deploying SC... used to set intial state
-  constructor(MockToken mockTokenAddress) {
+  constructor(IERC20 mockTokenAddress) {
     token = mockTokenAddress;
 
     // msg.sender is the address that deployed Sc
@@ -75,8 +78,6 @@ contract Lottery {
     require(ticketCount != 0, "zero ticketCount");
 
     uint256 totalPrice = ticketCount * ticketPrice;
-    uint256 availableToSpend = token.allowance(msg.sender, address(this));
-    require(availableToSpend >= totalPrice, "msg.sender approved too little");
 
     // At this point, msg.sender has enough allowance to buy the tickets they want & they're actually buying tickets
     bool success = token.transferFrom(msg.sender, address(this), totalPrice);
@@ -124,18 +125,5 @@ contract Lottery {
       uint256(
         keccak256(abi.encodePacked(block.difficulty, block.timestamp, tickets))
       );
-  }
-}
-
-// Inheriting from ERC20 gives us basic fungible token methods
-// https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#core
-contract MockToken is ERC20 {
-  // Constructor is run once upon deploying SC... used to set intial state
-  constructor() ERC20("MockToken", "MOK") {
-    // In the constructor... msg.sender is the owner of smart contract
-  }
-
-  function mint(uint256 amount) public {
-    _mint(msg.sender, amount);
   }
 }

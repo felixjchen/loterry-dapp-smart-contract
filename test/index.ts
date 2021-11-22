@@ -34,7 +34,7 @@ describe("Lottery", () => {
 
     const Lottery = await ethers.getContractFactory("Lottery");
     const lottery = await Lottery.deploy(mockToken.address);
-    await mockToken.deployed();
+    await lottery.deployed();
     return { mockToken, lottery };
   };
 
@@ -71,10 +71,10 @@ describe("Lottery", () => {
   it("shouldn't let me buy tickets with too few approved tokens", async () => {
     const { mockToken, lottery } = await deployContracts();
 
-    mockToken.mint(10012);
-    mockToken.approve(lottery.address, 19);
+    await mockToken.mint(10012);
+    await mockToken.approve(lottery.address, 19);
     await expect(lottery.buyTickets(1)).to.be.revertedWith(
-      "msg.sender approved too little"
+      "ERC20: transfer amount exceeds allowance"
     );
   });
 
@@ -85,8 +85,8 @@ describe("Lottery", () => {
 
   it("should have a few tickets after buyTickets", async () => {
     const { mockToken, lottery } = await deployContracts();
-    mockToken.mint(40);
-    mockToken.approve(lottery.address, 40);
+    await mockToken.mint(40);
+    await mockToken.approve(lottery.address, 40);
     await lottery.buyTickets(2);
     expect(await lottery.getTickets()).to.be.equal(2);
   });
@@ -94,8 +94,8 @@ describe("Lottery", () => {
   it("should have fees to withdraw after buyTickets", async () => {
     const { mockToken, lottery } = await deployContracts();
     const [owner] = await ethers.getSigners();
-    mockToken.mint(40);
-    mockToken.approve(lottery.address, 40);
+    await mockToken.mint(40);
+    await mockToken.approve(lottery.address, 40);
     await lottery.buyTickets(2);
 
     // 40 * 0.05 = 2
@@ -186,8 +186,8 @@ describe("Lottery", () => {
   });
   it("shouldn't let a draw happen within 5 minutes", async () => {
     const { mockToken, lottery } = await deployContracts();
-    mockToken.mint(40);
-    mockToken.approve(lottery.address, 40);
+    await mockToken.mint(40);
+    await mockToken.approve(lottery.address, 40);
     await lottery.buyTickets(1);
     await lottery.draw();
     await lottery.buyTickets(1);
@@ -199,11 +199,10 @@ describe("Lottery", () => {
   it("should let managers start a draw", async () => {
     const { mockToken, lottery } = await deployContracts();
     // eslint-disable-next-line no-unused-vars
-    const [owner, addr1] = await ethers.getSigners();
+    const [_, addr1] = await ethers.getSigners();
     await lottery.setManager(0, addr1.address);
-    mockToken.mint(40);
-    mockToken.approve(lottery.address, 40);
-    console.log(await mockToken.allowance(owner.address, lottery.address));
+    await mockToken.mint(40);
+    await mockToken.approve(lottery.address, 40);
     await lottery.buyTickets(1);
     await lottery.connect(addr1).draw();
   });
@@ -212,8 +211,8 @@ describe("Lottery", () => {
     const { mockToken, lottery } = await deployContracts();
     // eslint-disable-next-line no-unused-vars
     const [_, addr1] = await ethers.getSigners();
-    mockToken.connect(addr1).mint(100);
-    mockToken.connect(addr1).approve(lottery.address, 100);
+    await mockToken.connect(addr1).mint(100);
+    await mockToken.connect(addr1).approve(lottery.address, 100);
     await lottery.connect(addr1).buyTickets(5);
     await lottery.draw();
     expect(await mockToken.balanceOf(addr1.address)).to.be.equal(95);
