@@ -17,24 +17,24 @@ contract Lottery {
   event Outgoing(address, uint256);
 
   // https://ethereum.org/en/developers/tutorials/transfers-and-approval-of-erc-20-tokens-from-a-solidity-smart-contract/
-  IERC20 public token;
+  lotteryMokToken public token;
 
   // Constructor is run once upon deploying SC... used to set intial state
-  constructor() {
+  constructor(lotteryMokToken mokTokenAddress) {
     // In the constructor... msg.sender is the owner of smart contract
     ownerAddress = msg.sender;
 
-    token = new lotteryMokToken();
+    token = mokTokenAddress;
     ticketPrice = 20;
   }
 
   function buyTickets(int256 ticketCount) public {
     require(ticketCount > 0, "non-positive ticketCount");
 
-    uint256 unsignedTicketCount = uint256(ticketPrice);
+    uint256 unsignedTicketCount = uint256(ticketCount);
     uint256 totalPrice = unsignedTicketCount * ticketPrice;
     uint256 availableToSpend = token.allowance(msg.sender, address(this));
-    require(availableToSpend >= totalPrice, "msg.sender too little allowance");
+    require(availableToSpend >= totalPrice, "msg.sender approved too little");
 
     // At this point, msg.sender has enough allowance to buy the tickets they want & they're actually buying tickets
     bool success = token.transferFrom(msg.sender, address(this), totalPrice);
@@ -44,6 +44,10 @@ contract Lottery {
     // We have payment.. everything else is book keeping on our side
     tickets[msg.sender] += unsignedTicketCount;
     feeTotal += totalPrice / 20;
+  }
+
+  function getTickets() public view returns (uint256) {
+    return tickets[msg.sender];
   }
 
   modifier onlyOwner() {

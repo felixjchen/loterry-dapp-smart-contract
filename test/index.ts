@@ -33,7 +33,7 @@ describe("Lottery", () => {
     await lotteryMokToken.deployed();
 
     const Lottery = await ethers.getContractFactory("Lottery");
-    const lottery = await Lottery.deploy();
+    const lottery = await Lottery.deploy(lotteryMokToken.address);
     await lotteryMokToken.deployed();
     return { lotteryMokToken, lottery };
   };
@@ -72,30 +72,26 @@ describe("Lottery", () => {
     );
   });
 
-  it("shouldn't let me buy tickets with 0 approved tokens", async () => {
-    const { lottery } = await deployContracts();
-    await expect(lottery.buyTickets(1)).to.be.revertedWith(
-      "msg.sender too little allowance"
-    );
-  });
-
   it("shouldn't let me buy tickets with too few approved tokens", async () => {
     const { lotteryMokToken, lottery } = await deployContracts();
 
-    lotteryMokToken.mint(20);
+    lotteryMokToken.mint(10012);
     lotteryMokToken.approve(lottery.address, 19);
     await expect(lottery.buyTickets(1)).to.be.revertedWith(
-      "msg.sender too little allowance"
+      "msg.sender approved too little"
     );
   });
 
-  it("shouldn't let me spend more tokens then I own", async () => {
-    const { lotteryMokToken, lottery } = await deployContracts();
+  it("should have zero tickets for me on init", async () => {
+    const { lottery } = await deployContracts();
+    expect(await lottery.getTickets()).to.be.equal(0);
+  });
 
-    lotteryMokToken.mint(19);
-    lotteryMokToken.approve(lottery.address, 20);
-    await expect(lottery.buyTickets(1)).to.be.revertedWith(
-      "msg.sender too little allowance"
-    );
+  it("should have a few tickets after buyTickets", async () => {
+    const { lotteryMokToken, lottery } = await deployContracts();
+    lotteryMokToken.mint(40);
+    lotteryMokToken.approve(lottery.address, 40);
+    await lottery.buyTickets(2);
+    expect(await lottery.getTickets()).to.be.equal(2);
   });
 });
