@@ -11,7 +11,8 @@ contract Lottery {
 
   uint256 private ticketPrice;
   uint256 private feeTotal;
-  mapping(address => uint256) private tickets;
+  address[] private tickets;
+  uint256 private lastDrawTime;
 
   event Incoming(address, uint256);
   event Outgoing(address, uint256);
@@ -26,13 +27,13 @@ contract Lottery {
 
     token = mockTokenAddress;
     ticketPrice = 20;
+    lastDrawTime = block.timestamp - (60 * 5);
   }
 
-  function buyTickets(int256 ticketCount) public {
-    require(ticketCount > 0, "non-positive ticketCount");
+  function buyTickets(uint256 ticketCount) public {
+    require(ticketCount > 0, "negative ticketCount");
 
-    uint256 unsignedTicketCount = uint256(ticketCount);
-    uint256 totalPrice = unsignedTicketCount * ticketPrice;
+    uint256 totalPrice = ticketCount * ticketPrice;
     uint256 availableToSpend = token.allowance(msg.sender, address(this));
     require(availableToSpend >= totalPrice, "msg.sender approved too little");
 
@@ -42,16 +43,33 @@ contract Lottery {
     emit Incoming(msg.sender, totalPrice);
 
     // We have payment.. everything else is book keeping on our side
-    tickets[msg.sender] += unsignedTicketCount;
+    for (uint256 i = 0; i < ticketCount; i++) {
+      tickets.push(msg.sender);
+    }
     feeTotal += totalPrice / 20;
   }
 
   function getTickets() public view returns (uint256) {
-    return tickets[msg.sender];
+    uint256 count = 0;
+    for (uint256 i = 0; i < tickets.length; i++) {
+      if (tickets[i] == msg.sender) {
+        count += 1;
+      }
+    }
+    return count;
   }
 
   modifier onlyOwner() {
     require(msg.sender == ownerAddress, "msg.sender must be owner");
+    _;
+  }
+  modifier onlyOwnerOrManager() {
+    require(
+      msg.sender == ownerAddress ||
+        msg.sender == managerAddress[0] ||
+        msg.sender == managerAddress[1],
+      "msg.sender must be owner/manager"
+    );
     _;
   }
 
@@ -63,6 +81,25 @@ contract Lottery {
     feeTotal = 0;
     emit Outgoing(recipient, feeTotal);
   }
+
+  function setTicketPrice(uint256 targetTicketPrice) public onlyOwner {
+    ticketPrice = targetTicketPrice;
+  }
+
+  function getTicketPrice() public view onlyOwner returns (uint256) {
+    return ticketPrice;
+  }
+
+  function setManager(uint256 i, address to) public onlyOwner {
+    require(i <= 1, "only two indexs for managers");
+    managerAddress[i] = to;
+  }
+
+  function getManagers() public view onlyOwner returns (address[2] memory) {
+    return managerAddress;
+  }
+
+  function draw() public onlyOwnerOrManager {}
 }
 
 // Inheriting from ERC20 gives us basic fungible token methods

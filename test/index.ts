@@ -66,14 +66,7 @@ describe("Lottery", () => {
   it("shouldn't let me buy zero tickets", async () => {
     const { lottery } = await deployContracts();
     await expect(lottery.buyTickets(0)).to.be.revertedWith(
-      "non-positive ticketCount"
-    );
-  });
-
-  it("shouldn't let me buy negative tickets", async () => {
-    const { lottery } = await deployContracts();
-    await expect(lottery.buyTickets(-40)).to.be.revertedWith(
-      "non-positive ticketCount"
+      "negative ticketCount"
     );
   });
 
@@ -100,7 +93,7 @@ describe("Lottery", () => {
     expect(await lottery.getTickets()).to.be.equal(2);
   });
 
-  it("should have a some fees to withdraw after buyTickets", async () => {
+  it("should have fees to withdraw after buyTickets", async () => {
     const { mockToken, lottery } = await deployContracts();
     const [owner] = await ethers.getSigners();
     mockToken.mint(40);
@@ -110,5 +103,75 @@ describe("Lottery", () => {
     // 40 * 0.05 = 2
     await lottery.ownerWithdrawTo(owner.address);
     expect(await mockToken.balanceOf(owner.address)).to.be.equal(2);
+  });
+
+  it("should have no managers on init", async () => {
+    const { lottery } = await deployContracts();
+
+    const managers = await lottery.getManagers();
+    expect(managers[0]).to.be.equal(
+      "0x0000000000000000000000000000000000000000"
+    );
+    expect(managers[1]).to.be.equal(
+      "0x0000000000000000000000000000000000000000"
+    );
+  });
+
+  it("should let owner set managers", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1, addr2] = await ethers.getSigners();
+
+    await lottery.setManager(0, addr1.address);
+    await lottery.setManager(1, addr2.address);
+
+    const managers = await lottery.getManagers();
+    expect(managers[0]).to.be.equal(addr1.address);
+    expect(managers[1]).to.be.equal(addr2.address);
+  });
+
+  it("shouldn't let non-owner set managers", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await expect(
+      lottery.connect(addr1).setManager(0, addr1.address)
+    ).to.be.revertedWith("msg.sender must be owner");
+  });
+
+  it("shouldn't let non-owner get managers", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await expect(lottery.connect(addr1).getManagers()).to.be.revertedWith(
+      "msg.sender must be owner"
+    );
+  });
+
+  it("should have ticket price of 20 on init", async () => {
+    const { lottery } = await deployContracts();
+    expect(await lottery.getTicketPrice()).to.be.equal(20);
+  });
+  it("should let owner set ticket price", async () => {
+    const { lottery } = await deployContracts();
+    await lottery.setTicketPrice(25);
+    expect(await lottery.getTicketPrice()).to.be.equal(25);
+  });
+  it("shouldn't let manager set ticket price", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await lottery.setManager(0, addr1.address);
+    await expect(lottery.connect(addr1).setTicketPrice(25)).to.be.revertedWith(
+      "msg.sender must be owner"
+    );
+  });
+  it("shouldn't let user set ticket price", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await expect(lottery.connect(addr1).setTicketPrice(25)).to.be.revertedWith(
+      "msg.sender must be owner"
+    );
   });
 });
