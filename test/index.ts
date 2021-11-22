@@ -41,7 +41,7 @@ describe("Lottery", () => {
   it("should let owner withdraw to themself", async () => {
     const { mockToken, lottery } = await deployContracts();
     const [owner] = await ethers.getSigners();
-    await lottery.ownerWithdrawTo(owner.address);
+    await lottery.ownerWithdraw(owner.address);
     const ownerBalance = await mockToken.balanceOf(owner.address);
     expect(ownerBalance).to.equal(0);
   });
@@ -49,7 +49,7 @@ describe("Lottery", () => {
   it("should let owner withdraw to someone else", async () => {
     const { mockToken, lottery } = await deployContracts();
     const [_, addr1] = await ethers.getSigners();
-    await lottery.ownerWithdrawTo(addr1.address);
+    await lottery.ownerWithdraw(addr1.address);
     expect(await mockToken.balanceOf(addr1.address)).to.equal(0);
   });
 
@@ -59,15 +59,13 @@ describe("Lottery", () => {
     const [_, addr1] = await ethers.getSigners();
 
     await expect(
-      lottery.connect(addr1).ownerWithdrawTo(addr1.address)
+      lottery.connect(addr1).ownerWithdraw(addr1.address)
     ).to.be.revertedWith("msg.sender must be owner");
   });
 
   it("shouldn't let me buy zero tickets", async () => {
     const { lottery } = await deployContracts();
-    await expect(lottery.buyTickets(0)).to.be.revertedWith(
-      "negative ticketCount"
-    );
+    await expect(lottery.buyTickets(0)).to.be.revertedWith("zero ticketCount");
   });
 
   it("shouldn't let me buy tickets with too few approved tokens", async () => {
@@ -101,7 +99,7 @@ describe("Lottery", () => {
     await lottery.buyTickets(2);
 
     // 40 * 0.05 = 2
-    await lottery.ownerWithdrawTo(owner.address);
+    await lottery.ownerWithdraw(owner.address);
     expect(await mockToken.balanceOf(owner.address)).to.be.equal(2);
   });
 

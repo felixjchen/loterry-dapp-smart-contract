@@ -7,12 +7,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Lottery {
   address private ownerAddress;
-  address[2] private managerAddress;
+  address[2] private managerAddresses;
 
   address[] private tickets;
   uint256 private ticketPrice;
   uint256 private feeTotal;
-
   uint256 private prizeTotal;
   uint256 private lastDrawTime;
 
@@ -24,43 +23,12 @@ contract Lottery {
 
   // Constructor is run once upon deploying SC... used to set intial state
   constructor(MockToken mockTokenAddress) {
-    // In the constructor... msg.sender is the owner of smart contract
-    ownerAddress = msg.sender;
-
     token = mockTokenAddress;
+
+    // msg.sender is the address that deployed Sc
+    ownerAddress = msg.sender;
     ticketPrice = 20;
     lastDrawTime = block.timestamp - (60 * 5);
-  }
-
-  function buyTickets(uint256 ticketCount) public {
-    require(ticketCount > 0, "negative ticketCount");
-
-    uint256 totalPrice = ticketCount * ticketPrice;
-    uint256 availableToSpend = token.allowance(msg.sender, address(this));
-    require(availableToSpend >= totalPrice, "msg.sender approved too little");
-
-    // At this point, msg.sender has enough allowance to buy the tickets they want & they're actually buying tickets
-    bool success = token.transferFrom(msg.sender, address(this), totalPrice);
-    require(success, "error during transferFrom");
-    emit Incoming(msg.sender, totalPrice);
-
-    // We have payment.. everything else is book keeping on our side
-    for (uint256 i = 0; i < ticketCount; i++) {
-      tickets.push(msg.sender);
-    }
-
-    feeTotal += totalPrice / 20;
-    prizeTotal += totalPrice - (totalPrice / 20);
-  }
-
-  function getTickets() public view returns (uint256) {
-    uint256 count = 0;
-    for (uint256 i = 0; i < tickets.length; i++) {
-      if (tickets[i] == msg.sender) {
-        count += 1;
-      }
-    }
-    return count;
   }
 
   modifier onlyOwner() {
@@ -70,8 +38,8 @@ contract Lottery {
   modifier onlyOwnerOrManager() {
     require(
       msg.sender == ownerAddress ||
-        msg.sender == managerAddress[0] ||
-        msg.sender == managerAddress[1],
+        msg.sender == managerAddresses[0] ||
+        msg.sender == managerAddresses[1],
       "msg.sender must be owner/manager"
     );
     _;
@@ -79,7 +47,7 @@ contract Lottery {
 
   // Dumps entire feeTotal into recipient's address.
   // Only owner can call this function
-  function ownerWithdrawTo(address recipient) public onlyOwner {
+  function ownerWithdraw(address recipient) public onlyOwner {
     bool success = token.transfer(recipient, feeTotal);
     require(success, "error during transfer");
     feeTotal = 0;
@@ -94,13 +62,45 @@ contract Lottery {
     return ticketPrice;
   }
 
-  function setManager(uint256 i, address to) public onlyOwner {
-    require(i <= 1, "only two indexs for managers");
-    managerAddress[i] = to;
+  function setManager(uint256 i, address managerAddress) public onlyOwner {
+    require(i == 0 || i == 1, "only two indexs for managers");
+    managerAddresses[i] = managerAddress;
   }
 
   function getManagers() public view onlyOwner returns (address[2] memory) {
-    return managerAddress;
+    return managerAddresses;
+  }
+
+  function buyTickets(uint256 ticketCount) public {
+    require(ticketCount != 0, "zero ticketCount");
+
+    uint256 totalPrice = ticketCount * ticketPrice;
+    uint256 availableToSpend = token.allowance(msg.sender, address(this));
+    require(availableToSpend >= totalPrice, "msg.sender approved too little");
+
+    // At this point, msg.sender has enough allowance to buy the tickets they want & they're actually buying tickets
+    bool success = token.transferFrom(msg.sender, address(this), totalPrice);
+    require(success, "error during transferFrom");
+    emit Incoming(msg.sender, totalPrice);
+
+    // We have payment, everything else is book keeping on our side
+    for (uint256 i = 0; i < ticketCount; i++) {
+      tickets.push(msg.sender);
+    }
+    uint256 fee = totalPrice / 20;
+    prizeTotal += totalPrice - fee;
+    feeTotal += fee;
+  }
+
+  // Returns number of tickets held by an individual
+  function getTickets() public view returns (uint256) {
+    uint256 count = 0;
+    for (uint256 i = 0; i < tickets.length; i++) {
+      if (tickets[i] == msg.sender) {
+        count += 1;
+      }
+    }
+    return count;
   }
 
   function draw() public onlyOwnerOrManager {
