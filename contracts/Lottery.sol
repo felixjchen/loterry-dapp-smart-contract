@@ -20,11 +20,11 @@ contract Lottery {
   MockToken public token;
 
   // Constructor is run once upon deploying SC... used to set intial state
-  constructor(MockToken mokTokenAddress) {
+  constructor(MockToken mockTokenAddress) {
     // In the constructor... msg.sender is the owner of smart contract
     ownerAddress = msg.sender;
 
-    token = mokTokenAddress;
+    token = mockTokenAddress;
     ticketPrice = 20;
   }
 
