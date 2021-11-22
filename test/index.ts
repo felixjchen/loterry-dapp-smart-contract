@@ -174,4 +174,50 @@ describe("Lottery", () => {
       "msg.sender must be owner"
     );
   });
+  it("shouldn't let users draw", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await expect(lottery.connect(addr1).draw()).to.be.revertedWith(
+      "msg.sender must be owner/manager"
+    );
+  });
+  it("shouldn't let a draw happen with no tickets", async () => {
+    const { lottery } = await deployContracts();
+    await expect(lottery.draw()).to.be.revertedWith("no tickets");
+  });
+  it("shouldn't let a draw happen within 5 minutes", async () => {
+    const { mockToken, lottery } = await deployContracts();
+    mockToken.mint(40);
+    mockToken.approve(lottery.address, 40);
+    await lottery.buyTickets(1);
+    await lottery.draw();
+    await lottery.buyTickets(1);
+    await expect(lottery.draw()).to.be.revertedWith(
+      "need 5 minutes between draws"
+    );
+  });
+
+  it("should let managers start a draw", async () => {
+    const { mockToken, lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [owner, addr1] = await ethers.getSigners();
+    await lottery.setManager(0, addr1.address);
+    mockToken.mint(40);
+    mockToken.approve(lottery.address, 40);
+    console.log(await mockToken.allowance(owner.address, lottery.address));
+    await lottery.buyTickets(1);
+    await lottery.connect(addr1).draw();
+  });
+
+  it("should payout 5% on draws", async () => {
+    const { mockToken, lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    mockToken.connect(addr1).mint(100);
+    mockToken.connect(addr1).approve(lottery.address, 100);
+    await lottery.connect(addr1).buyTickets(5);
+    await lottery.draw();
+    expect(await mockToken.balanceOf(addr1.address)).to.be.equal(95);
+  });
 });

@@ -9,9 +9,11 @@ contract Lottery {
   address private ownerAddress;
   address[2] private managerAddress;
 
+  address[] private tickets;
   uint256 private ticketPrice;
   uint256 private feeTotal;
-  address[] private tickets;
+
+  uint256 private prizeTotal;
   uint256 private lastDrawTime;
 
   event Incoming(address, uint256);
@@ -46,7 +48,9 @@ contract Lottery {
     for (uint256 i = 0; i < ticketCount; i++) {
       tickets.push(msg.sender);
     }
+
     feeTotal += totalPrice / 20;
+    prizeTotal += totalPrice - (totalPrice / 20);
   }
 
   function getTickets() public view returns (uint256) {
@@ -99,7 +103,28 @@ contract Lottery {
     return managerAddress;
   }
 
-  function draw() public onlyOwnerOrManager {}
+  function draw() public onlyOwnerOrManager {
+    require(tickets.length > 0, "no tickets");
+    require(
+      block.timestamp > lastDrawTime + 300,
+      "need 5 minutes between draws"
+    );
+
+    address winner = tickets[random() % tickets.length];
+    token.transfer(winner, prizeTotal);
+    emit Outgoing(winner, prizeTotal);
+    // Reset tickets, prize pool and draw time
+    delete tickets;
+    lastDrawTime = block.timestamp;
+    prizeTotal = 0;
+  }
+
+  function random() private view returns (uint256) {
+    return
+      uint256(
+        keccak256(abi.encodePacked(block.difficulty, block.timestamp, tickets))
+      );
+  }
 }
 
 // Inheriting from ERC20 gives us basic fungible token methods
