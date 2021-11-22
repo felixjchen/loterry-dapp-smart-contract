@@ -25,6 +25,25 @@ contract Lottery {
     ownerAddress = msg.sender;
 
     token = new lotteryMokToken();
+    ticketPrice = 20;
+  }
+
+  function buyTickets(int256 ticketCount) public {
+    require(ticketCount > 0, "non-positive ticketCount");
+
+    uint256 unsignedTicketCount = uint256(ticketPrice);
+    uint256 totalPrice = unsignedTicketCount * ticketPrice;
+    uint256 availableToSpend = token.allowance(msg.sender, address(this));
+    require(availableToSpend >= totalPrice, "msg.sender too little allowance");
+
+    // At this point, msg.sender has enough allowance to buy the tickets they want & they're actually buying tickets
+    bool success = token.transferFrom(msg.sender, address(this), totalPrice);
+    require(success, "error during transferFrom");
+    emit Incoming(msg.sender, totalPrice);
+
+    // We have payment.. everything else is book keeping on our side
+    tickets[msg.sender] += unsignedTicketCount;
+    feeTotal += totalPrice / 20;
   }
 
   modifier onlyOwner() {
@@ -32,14 +51,13 @@ contract Lottery {
     _;
   }
 
-  function buyTickets(address recipient) public {}
-
   // Dumps entire feeTotal into recipient's address.
   // Only owner can call this function
   function ownerWithdrawERC20(address recipient) public onlyOwner {
-    token.transfer(recipient, feeTotal);
-    emit Outgoing(recipient, feeTotal);
+    bool success = token.transfer(recipient, feeTotal);
+    require(success, "error during transfer");
     feeTotal = 0;
+    emit Outgoing(recipient, feeTotal);
   }
 }
 

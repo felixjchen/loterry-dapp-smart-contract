@@ -48,13 +48,54 @@ describe("Lottery", () => {
     expect(ownerBalance).to.equal(0);
   });
 
-  it("shouldn't let not owner withdraw", async () => {
-    // eslint-disable-next-line no-unused-vars
-    const { lotteryMokToken, lottery } = await deployContracts();
+  it("shouldn't let non-owner withdraw", async () => {
+    const { lottery } = await deployContracts();
     // eslint-disable-next-line no-unused-vars
     const [_, addr1] = await ethers.getSigners();
 
-    await expect(lottery.connect(addr1).ownerWithdrawERC20(addr1.address)).to.be
-      .reverted;
+    await expect(
+      lottery.connect(addr1).ownerWithdrawERC20(addr1.address)
+    ).to.be.revertedWith("msg.sender must be owner");
+  });
+
+  it("shouldn't let me buy zero tickets", async () => {
+    const { lottery } = await deployContracts();
+    await expect(lottery.buyTickets(0)).to.be.revertedWith(
+      "non-positive ticketCount"
+    );
+  });
+
+  it("shouldn't let me buy negative tickets", async () => {
+    const { lottery } = await deployContracts();
+    await expect(lottery.buyTickets(-40)).to.be.revertedWith(
+      "non-positive ticketCount"
+    );
+  });
+
+  it("shouldn't let me buy tickets with 0 approved tokens", async () => {
+    const { lottery } = await deployContracts();
+    await expect(lottery.buyTickets(1)).to.be.revertedWith(
+      "msg.sender too little allowance"
+    );
+  });
+
+  it("shouldn't let me buy tickets with too few approved tokens", async () => {
+    const { lotteryMokToken, lottery } = await deployContracts();
+
+    lotteryMokToken.mint(20);
+    lotteryMokToken.approve(lottery.address, 19);
+    await expect(lottery.buyTickets(1)).to.be.revertedWith(
+      "msg.sender too little allowance"
+    );
+  });
+
+  it("shouldn't let me spend more tokens then I own", async () => {
+    const { lotteryMokToken, lottery } = await deployContracts();
+
+    lotteryMokToken.mint(19);
+    lotteryMokToken.approve(lottery.address, 20);
+    await expect(lottery.buyTickets(1)).to.be.revertedWith(
+      "msg.sender too little allowance"
+    );
   });
 });
