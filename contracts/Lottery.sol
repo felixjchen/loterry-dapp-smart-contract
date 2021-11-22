@@ -17,10 +17,10 @@ contract Lottery {
   event Outgoing(address, uint256);
 
   // https://ethereum.org/en/developers/tutorials/transfers-and-approval-of-erc-20-tokens-from-a-solidity-smart-contract/
-  lotteryMokToken public token;
+  MockToken public token;
 
   // Constructor is run once upon deploying SC... used to set intial state
-  constructor(lotteryMokToken mokTokenAddress) {
+  constructor(MockToken mokTokenAddress) {
     // In the constructor... msg.sender is the owner of smart contract
     ownerAddress = msg.sender;
 
@@ -57,7 +57,7 @@ contract Lottery {
 
   // Dumps entire feeTotal into recipient's address.
   // Only owner can call this function
-  function ownerWithdrawERC20(address recipient) public onlyOwner {
+  function ownerWithdrawTo(address recipient) public onlyOwner {
     bool success = token.transfer(recipient, feeTotal);
     require(success, "error during transfer");
     feeTotal = 0;
@@ -67,9 +67,9 @@ contract Lottery {
 
 // Inheriting from ERC20 gives us basic fungible token methods
 // https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#core
-contract lotteryMokToken is ERC20 {
+contract MockToken is ERC20 {
   // Constructor is run once upon deploying SC... used to set intial state
-  constructor() ERC20("lotteryMokToken", "MOK") {
+  constructor() ERC20("MockToken", "MOK") {
     // In the constructor... msg.sender is the owner of smart contract
   }
 
