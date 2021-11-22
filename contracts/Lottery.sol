@@ -30,7 +30,7 @@ contract Lottery {
 
     // msg.sender is the address that deployed Sc
     ownerAddress = msg.sender;
-    ticketPrice = 20;
+    ticketPrice = 20e18;
     lastDrawTime = block.timestamp - (60 * 5);
   }
 

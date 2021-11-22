@@ -21,8 +21,10 @@ describe("MockToken", () => {
     const [owner] = await ethers.getSigners();
 
     expect(await MOK.balanceOf(owner.address)).to.equal(0);
-    MOK.mint(10012);
-    expect(await MOK.balanceOf(owner.address)).to.equal(10012);
+    MOK.mint(ethers.utils.parseEther("10012"));
+    expect(await MOK.balanceOf(owner.address)).to.equal(
+      ethers.utils.parseEther("10012")
+    );
   });
 });
 
@@ -71,8 +73,8 @@ describe("Lottery", () => {
   it("shouldn't let me buy tickets with too few approved tokens", async () => {
     const { MOK, lottery } = await deployContracts();
 
-    await MOK.mint(10012);
-    await MOK.approve(lottery.address, 19);
+    await MOK.mint(ethers.utils.parseEther("10012"));
+    await MOK.approve(lottery.address, ethers.utils.parseEther("19"));
     await expect(lottery.buyTickets(1)).to.be.revertedWith(
       "ERC20: transfer amount exceeds allowance"
     );
@@ -85,22 +87,26 @@ describe("Lottery", () => {
 
   it("should have a few tickets after buyTickets", async () => {
     const { MOK, lottery } = await deployContracts();
-    await MOK.mint(40);
-    await MOK.approve(lottery.address, 40);
+    const [owner] = await ethers.getSigners();
+    await MOK.mint(ethers.utils.parseEther("40"));
+    await MOK.approve(lottery.address, ethers.utils.parseEther("40"));
     await lottery.buyTickets(2);
     expect(await lottery.getTickets()).to.be.equal(2);
+    expect(await MOK.balanceOf(owner.address)).to.be.equal(0);
   });
 
   it("should have fees to withdraw after buyTickets", async () => {
     const { MOK, lottery } = await deployContracts();
     const [owner] = await ethers.getSigners();
-    await MOK.mint(40);
-    await MOK.approve(lottery.address, 40);
+    await MOK.mint(ethers.utils.parseEther("40"));
+    await MOK.approve(lottery.address, ethers.utils.parseEther("40"));
     await lottery.buyTickets(2);
 
     // 40 * 0.05 = 2
     await lottery.ownerWithdraw(owner.address);
-    expect(await MOK.balanceOf(owner.address)).to.be.equal(2);
+    expect(await MOK.balanceOf(owner.address)).to.be.equal(
+      ethers.utils.parseEther("2")
+    );
   });
 
   it("should have no managers on init", async () => {
@@ -146,9 +152,11 @@ describe("Lottery", () => {
     );
   });
 
-  it("should have ticket price of 20 on init", async () => {
+  it("should have ticket price of 20e18 on init", async () => {
     const { lottery } = await deployContracts();
-    expect(await lottery.getTicketPrice()).to.be.equal(20);
+    expect(await lottery.getTicketPrice()).to.be.equal(
+      ethers.utils.parseEther("20")
+    );
   });
   it("should let owner set ticket price", async () => {
     const { lottery } = await deployContracts();
@@ -186,8 +194,8 @@ describe("Lottery", () => {
   });
   it("shouldn't let a draw happen within 5 minutes", async () => {
     const { MOK, lottery } = await deployContracts();
-    await MOK.mint(40);
-    await MOK.approve(lottery.address, 40);
+    await MOK.mint(ethers.utils.parseEther("40"));
+    await MOK.approve(lottery.address, ethers.utils.parseEther("40"));
     await lottery.buyTickets(1);
     await lottery.draw();
     await lottery.buyTickets(1);
@@ -201,20 +209,25 @@ describe("Lottery", () => {
     // eslint-disable-next-line no-unused-vars
     const [_, addr1] = await ethers.getSigners();
     await lottery.setManager(0, addr1.address);
-    await MOK.mint(40);
-    await MOK.approve(lottery.address, 40);
+    await MOK.mint(ethers.utils.parseEther("40"));
+    await MOK.approve(lottery.address, ethers.utils.parseEther("40"));
     await lottery.buyTickets(1);
     await lottery.connect(addr1).draw();
   });
 
-  it("should payout 5% on draws", async () => {
+  it("should payout 95% on draws", async () => {
     const { MOK, lottery } = await deployContracts();
     // eslint-disable-next-line no-unused-vars
     const [_, addr1] = await ethers.getSigners();
-    await MOK.connect(addr1).mint(100);
-    await MOK.connect(addr1).approve(lottery.address, 100);
+    await MOK.connect(addr1).mint(ethers.utils.parseEther("100"));
+    await MOK.connect(addr1).approve(
+      lottery.address,
+      ethers.utils.parseEther("100")
+    );
     await lottery.connect(addr1).buyTickets(5);
     await lottery.draw();
-    expect(await MOK.balanceOf(addr1.address)).to.be.equal(95);
+    expect(await MOK.balanceOf(addr1.address)).to.be.equal(
+      ethers.utils.parseEther("95")
+    );
   });
 });
