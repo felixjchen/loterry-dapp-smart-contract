@@ -3,12 +3,13 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 // https://docs.openzeppelin.com/contracts/2.x/access-control
 
-contract Lottery {
-  address private ownerAddress;
-  address[2] private managerAddresses;
+contract Lottery is AccessControlEnumerable, Ownable {
+  bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
   address[] private tickets;
   uint256 private ticketPrice;
@@ -27,22 +28,14 @@ contract Lottery {
   // Constructor is run once upon deploying SC... used to set intial state
   constructor(IERC20 mockTokenAddress) {
     token = mockTokenAddress;
-
-    // msg.sender is the address that deployed Sc
-    ownerAddress = msg.sender;
     ticketPrice = 20e18;
     lastDrawTime = block.timestamp - (60 * 5);
+    _setupRole(DEFAULT_ADMIN_ROLE, owner());
   }
 
-  modifier onlyOwner() {
-    require(msg.sender == ownerAddress, "msg.sender must be owner");
-    _;
-  }
   modifier onlyOwnerOrManager() {
     require(
-      msg.sender == ownerAddress ||
-        msg.sender == managerAddresses[0] ||
-        msg.sender == managerAddresses[1],
+      msg.sender == owner() || hasRole(MANAGER_ROLE, msg.sender),
       "msg.sender must be owner/manager"
     );
     _;
@@ -65,13 +58,19 @@ contract Lottery {
     return ticketPrice;
   }
 
-  function setManager(uint256 i, address managerAddress) public onlyOwner {
-    require(i == 0 || i == 1, "only two indexs for managers");
-    managerAddresses[i] = managerAddress;
+  function addManager(address managerAddress) public onlyOwner {
+    uint256 managerCount = getRoleMemberCount(MANAGER_ROLE);
+    require(managerCount < 2, "too many managers");
+    grantRole(MANAGER_ROLE, managerAddress);
   }
 
-  function getManagers() public view onlyOwner returns (address[2] memory) {
-    return managerAddresses;
+  function getManagers() public view onlyOwner returns (address[] memory) {
+    //https://stackoverflow.com/questions/60616895/solidity-returns-filtered-array-of-structs-without-push
+    address[] memory result = new address[](getRoleMemberCount(MANAGER_ROLE));
+    for (uint256 i = 0; i < getRoleMemberCount(MANAGER_ROLE); i++) {
+      result[i] = getRoleMember(MANAGER_ROLE, i);
+    }
+    return result;
   }
 
   function buyTickets(uint256 ticketCount) public {
