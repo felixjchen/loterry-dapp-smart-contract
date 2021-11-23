@@ -116,6 +116,16 @@ describe("Lottery", () => {
     expect(managers.length).to.be.equal(0);
   });
 
+  it("should let owner add a manager", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1, addr2] = await ethers.getSigners();
+    await lottery.addManager(addr1.address);
+
+    const managers = await lottery.getManagers();
+    expect(managers[0]).to.be.equal(addr1.address);
+  });
+
   it("should let owner add managers", async () => {
     const { lottery } = await deployContracts();
     // eslint-disable-next-line no-unused-vars
