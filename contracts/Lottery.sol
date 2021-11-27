@@ -41,6 +41,18 @@ contract Lottery is AccessControlEnumerable, Ownable {
     _;
   }
 
+  function amIOwner() public view returns (bool) {
+    return msg.sender == owner();
+  }
+
+  function amIManager() public view returns (bool) {
+    return hasRole(MANAGER_ROLE, msg.sender);
+  }
+
+  function getPrizeTotal() public view returns (uint256) {
+    return prizeTotal;
+  }
+
   // Dumps entire feeTotal into recipient's address.
   // Only owner can call this function
   function ownerWithdraw(address recipient) public onlyOwner {

@@ -247,4 +247,56 @@ describe("Lottery", () => {
       ethers.utils.parseEther("95")
     );
   });
+
+  it("should should prize total publicly", async () => {
+    const { MOK, lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await MOK.connect(addr1).mint(ethers.utils.parseEther("100"));
+    await MOK.connect(addr1).approve(
+      lottery.address,
+      ethers.utils.parseEther("100")
+    );
+    await lottery.connect(addr1).buyTickets(5);
+
+    expect(await lottery.getPrizeTotal()).to.be.equal(
+      ethers.utils.parseEther("95")
+    );
+  });
+
+  it("should know owner is owner", async () => {
+    const { lottery } = await deployContracts();
+    expect(await lottery.amIOwner()).to.be.equal(true);
+  });
+  it("should know user is not owner", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    expect(await lottery.connect(addr1).amIOwner()).to.be.equal(false);
+  });
+  it("should know manager is not owner", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await lottery.addManager(addr1.address);
+    expect(await lottery.connect(addr1).amIOwner()).to.be.equal(false);
+  });
+
+  it("should know owner is not manager", async () => {
+    const { lottery } = await deployContracts();
+    expect(await lottery.amIManager()).to.be.equal(false);
+  });
+  it("should know user is not manager", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    expect(await lottery.connect(addr1).amIManager()).to.be.equal(false);
+  });
+  it("should know manager is manager", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await lottery.addManager(addr1.address);
+    expect(await lottery.connect(addr1).amIManager()).to.be.equal(true);
+  });
 });
