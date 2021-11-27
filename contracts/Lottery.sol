@@ -62,11 +62,15 @@ contract Lottery is AccessControlEnumerable, Ownable {
     emit Outgoing(recipient, feeTotal);
   }
 
+  function getFeeTotal() public view onlyOwner returns (uint256) {
+    return feeTotal;
+  }
+
   function setTicketPrice(uint256 targetTicketPrice) public onlyOwner {
     ticketPrice = targetTicketPrice;
   }
 
-  function getTicketPrice() public view onlyOwner returns (uint256) {
+  function getTicketPrice() public view returns (uint256) {
     return ticketPrice;
   }
 
@@ -74,6 +78,10 @@ contract Lottery is AccessControlEnumerable, Ownable {
     uint256 managerCount = getRoleMemberCount(MANAGER_ROLE);
     require(managerCount < 2, "too many managers");
     grantRole(MANAGER_ROLE, managerAddress);
+  }
+
+  function deleteManager(address managerAddress) public onlyOwner {
+    revokeRole(MANAGER_ROLE, managerAddress);
   }
 
   function getManagers() public view onlyOwner returns (address[] memory) {

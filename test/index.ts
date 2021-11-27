@@ -126,6 +126,17 @@ describe("Lottery", () => {
     expect(managers[0]).to.be.equal(addr1.address);
   });
 
+  it("should let owner delete a manager", async () => {
+    const { lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1, addr2] = await ethers.getSigners();
+    await lottery.addManager(addr1.address);
+    await lottery.deleteManager(addr1.address);
+
+    const managers = await lottery.getManagers();
+    expect(managers.length).to.be.equal(0);
+  });
+
   it("should let owner add managers", async () => {
     const { lottery } = await deployContracts();
     // eslint-disable-next-line no-unused-vars
@@ -259,7 +270,7 @@ describe("Lottery", () => {
     );
     await lottery.connect(addr1).buyTickets(5);
 
-    expect(await lottery.getPrizeTotal()).to.be.equal(
+    expect(await lottery.connect(addr1).getPrizeTotal()).to.be.equal(
       ethers.utils.parseEther("95")
     );
   });
@@ -299,4 +310,39 @@ describe("Lottery", () => {
     await lottery.addManager(addr1.address);
     expect(await lottery.connect(addr1).amIManager()).to.be.equal(true);
   });
+
+  it("should should let owner get fee total", async () => {
+    const { MOK, lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await MOK.connect(addr1).mint(ethers.utils.parseEther("100"));
+    await MOK.connect(addr1).approve(
+      lottery.address,
+      ethers.utils.parseEther("100")
+    );
+    await lottery.connect(addr1).buyTickets(5);
+
+    expect(await lottery.getFeeTotal()).to.be.equal(
+      ethers.utils.parseEther("5")
+    );
+  });
+
+  it("should should not let user get fee total", async () => {
+    const { MOK, lottery } = await deployContracts();
+    // eslint-disable-next-line no-unused-vars
+    const [_, addr1] = await ethers.getSigners();
+    await MOK.connect(addr1).mint(ethers.utils.parseEther("100"));
+    await MOK.connect(addr1).approve(
+      lottery.address,
+      ethers.utils.parseEther("100")
+    );
+    await lottery.connect(addr1).buyTickets(5);
+
+    await expect(lottery.connect(addr1).getFeeTotal()).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
+  });
 });
+
+// npx hardhat verify --network ropsten 0x91Cd4bff6e536f5B31F1845284F90439011f2158
+// npx hardhat verify --network ropsten 0x43E4483D9aE0De9c62350b6347c404Df3F340626 "0x91Cd4bff6e536f5B31F1845284F90439011f2158"
